@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brief Mapper – DESN511</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .app-header {
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+        }
+        /* Thin rainbow top accent */
+        .rainbow-bar {
+            height: 5px;
+            background: linear-gradient(90deg, #dc2626 0%, #ea580c 17%, #ca8a04 33%, #16a34a 50%, #0891b2 67%, #7c3aed 83%, #db2777 100%);
+            border-radius: 5px 5px 0 0;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1e293b;
+            padding: 20px 24px;
+            border-radius: 0 0 10px 10px;
+        }
+        .header-content h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+        .header-content p {
+            font-size: 0.88rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        /* Progress bar */
+        .progress-bar-container {
+            max-width: 800px;
+            margin: 20px auto 6px auto;
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 7px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0891b2, #7c3aed);
+            border-radius: 20px;
+            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 0%;
+        }
+        .progress-label {
+            max-width: 800px;
+            margin: 0 auto 18px auto;
+            text-align: right;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* Completion message */
+        .completion-message {
+            max-width: 800px;
+            margin: 0 auto 16px auto;
+            background: #f0fdfa;
+            border: 1.5px solid #99f6e4;
+            border-radius: 10px;
+            padding: 16px 20px;
+            text-align: center;
+            display: none;
+        }
+        .completion-message.visible { display: block; }
+        .completion-message p {
+            font-size: 0.92rem;
+            color: #134e4a;
+            font-weight: 600;
+        }
+        .completion-message .sub {
+            font-weight: 400;
+            font-size: 0.84rem;
+            color: #475569;
+            margin-top: 4px;
+        }
+
+        /* Deliverable cards */
+        .deliverables-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .deliverable-card {
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1.5px solid #e2e8f0;
+            overflow: hidden;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .deliverable-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .deliverable-card.completed {
+            border-color: #99f6e4;
+            background: #fafffe;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            cursor: pointer;
+            user-select: none;
+            gap: 14px;
+        }
+        .card-header:hover {
+            background: #f8fafc;
+        }
+
+        .card-status {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+        .deliverable-card.completed .card-status {
+            background: #0891b2;
+            border-color: #0891b2;
+            color: #fff;
+        }
+        .deliverable-card:not(.completed) .card-status {
+            color: transparent;
+        }
+
+        .card-title-group { flex: 1; }
+        .card-title {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+        }
+        .card-meta {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .card-meta .due-tag {
+            background: #f1f5f9;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.72rem;
+            color: #475569;
+        }
+        .card-meta .due-soon {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        .card-chevron {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+        .deliverable-card.open .card-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* Card body */
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .deliverable-card.open .card-body {
+            max-height: 800px;
+        }
+        .card-body-inner {
+            padding: 0 20px 20px 20px;
+        }
+
+        /* Hint toggle */
+        .hint-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #0891b2;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 14px;
+            padding: 4px 0;
+            border: none;
+            background: none;
+            font-family: inherit;
+        }
+        .hint-toggle:hover { color: #0e7490; }
+        .hint-content {
+            background: #f0f9ff;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.84rem;
+            color: #1e293b;
+            line-height: 1.55;
+            margin-bottom: 16px;
+            border-left: 3px solid #0891b2;
+            display: none;
+        }
+        .hint-content.visible { display: block; }
+
+        /* Input areas */
+        .input-group { margin-bottom: 14px; }
+        .input-group:last-child { margin-bottom: 0; }
+        .input-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .input-field {
+            width: 100%;
+            min-height: 68px;
+            padding: 12px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: #1e293b;
+            resize: vertical;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            background: #f8fafc;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #0891b2;
+            box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+            background: #ffffff;
+        }
+        .input-field::placeholder {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .app-footer {
+            max-width: 800px;
+            margin: 24px auto 0 auto;
+            padding: 16px 0;
+            text-align: center;
+        }
+        .reset-btn {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: none;
+            border: 1px solid #e2e8f0;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .reset-btn:hover {
+            color: #dc2626;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 16px; }
+            .card-header { padding: 12px 16px; }
+            .card-body-inner { padding: 0 16px 16px; }
+            .header-content h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="rainbow-bar"></div>
+<div class="header-content">
+    <h1>Brief Mapper</h1>
+    <p>Work through each deliverable — open it, check the hints from the brief, and note what it requires and what you still need to figure out.</p>
+</div>
+
+<div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressFill"></div>
+</div>
+<div class="progress-label" id="progressLabel">0 of 7 mapped</div>
+
+<div class="completion-message" id="completionMsg">
+    <p>Nice work — you've mapped the full brief. 🎯</p>
+    <p class="sub">Now look at your "need to find out" notes — that's your research agenda for the library session and this week's SDL.</p>
+</div>
+
+<div class="deliverables-container" id="deliverablesContainer"></div>
+
+<div class="app-footer">
+    <button class="reset-btn" onclick="resetAll()">Clear all entries</button>
+</div>
+
+<script>
+const deliverables = [
+    {
+        id: "lofi",
+        title: "Lo-fi click-through prototype",
+        meta: "Figma",
+        due: "Week 6",
+        dueSoon: false,
+        hint: "A working click-through website prototype in Figma, uploaded to Canvas. Screenshots and videos to be embedded in your Explanatory Document draft. You'll present this in person in Week 6.",
+        placeholders: {
+            requirements: "e.g. Website page structure, navigation flow, basic layout…",
+            findout: "e.g. What pages do recipe websites typically have? What makes navigation intuitive?"
+        }
+    },
+    {
+        id: "hifi",
+        title: "Hi-fi interactive website prototype",
+        meta: "Figma",
+        due: "Week 13",
+        dueSoon: false,
+        hint: "A polished Figma desktop website prototype that teaches users how to make your recipe while sharing its story and context. Must use a consistent design system, include at least five pages, be accessible and engaging for young adults, and include your TikTok recipe video.",
+        placeholders: {
+            requirements: "e.g. At least 5 pages, consistent design system, accessible, includes TikTok video…",
+            findout: "e.g. What makes a design system consistent? What accessibility standards apply?"
+        }
+    },
+    {
+        id: "tiktok",
+        title: "TikTok recipe video",
+        meta: "20–40 seconds",
+        due: "Week 13",
+        dueSoon: false,
+        hint: "A 20–40 second TikTok-style recipe video that supports and is embedded in your website prototype. Think about what makes recipe content work on short-form video — pacing, visual appeal, personality.",
+        placeholders: {
+            requirements: "e.g. 20-40 sec, embedded in website, recipe-focused…",
+            findout: "e.g. What makes TikTok recipe videos engaging? How do I film and edit one?"
+        }
+    },
+    {
+        id: "explan-form",
+        title: "Explanatory document (formative)",
+        meta: "Figma slides · 500+ words · Presented in person",
+        due: "Week 6",
+        dueSoon: false,
+        hint: "A designed and written explanatory document as Figma slides that summarises the conceptual and contextual themes, design process, and methods you've explored. Must include 2x user flow diagrams. Minimum 500 words. You'll give a 3–5 minute in-person presentation.",
+        placeholders: {
+            requirements: "e.g. 500+ words, 2 user flow diagrams, 3-5 min presentation, Figma slides…",
+            findout: "e.g. What is a user flow diagram? What counts as 'conceptual and contextual themes'?"
+        }
+    },
+    {
+        id: "explan-summ",
+        title: "Explanatory document (summative)",
+        meta: "Figma slides · 1000+ words",
+        due: "Week 13",
+        dueSoon: false,
+        hint: "The expanded version of your formative document — same format but deeper. Minimum 1000 words, still requires 2x user flow diagrams. This should articulate your full design process, conceptual framing, and methods.",
+        placeholders: {
+            requirements: "e.g. 1000+ words, 2 user flow diagrams, full design process reflection…",
+            findout: "e.g. How do I connect design theory to my practical work? What academic sources do I need?"
+        }
+    },
+    {
+        id: "workbook",
+        title: "Process workbook",
+        meta: "Figma · Ongoing",
+        due: "Ongoing",
+        dueSoon: true,
+        hint: "Your Figma workbook documents your entire design journey week by week — process, analysis, ideation, exploration, experimentation, critical reflection on your recipe connection, annotated examples of influential designers' work, and work-in-progress mock-ups. This is also where you document POOL feedback and your response to it.",
+        placeholders: {
+            requirements: "e.g. Weekly documentation, annotations, reflections, designer examples, WIP mockups…",
+            findout: "e.g. What does good annotation look like? How do I reflect on my own process?"
+        }
+    },
+    {
+        id: "pool",
+        title: "POOL events",
+        meta: "Peer + lecturer feedback sessions",
+        due: "Wk 3, 9, 11",
+        dueSoon: true,
+        hint: "Points of Observation of Learning — mandatory moments where your learning is observed. Week 3 (next week!) and Week 9 are peer + lecturer feedback. Week 11 is one-on-one with your lecturer. You must document the feedback in your workbook with self-reflection and an action plan. Attendance is recorded as evidence of Professionalism.",
+        placeholders: {
+            requirements: "e.g. Attendance (mandatory), document feedback in workbook, self-reflection, action plan…",
+            findout: "e.g. What should I have ready to show by next week? How do I write a useful self-reflection?"
+        }
+    }
+];
+
+function createDeliverableCard(d) {
+    const card = document.createElement('div');
+    card.className = 'deliverable-card';
+    card.id = `card-${d.id}`;
+    card.innerHTML = `
+        <div class="card-header" onclick="toggleCard('${d.id}')">
+            <div class="card-status" id="status-${d.id}">✓</div>
+            <div class="card-title-group">
+                <div class="card-title">${d.title}</div>
+                <div class="card-meta">
+                    ${d.meta} · <span class="due-tag ${d.dueSoon ? 'due-soon' : ''}">${d.due}</span>
+                </div>
+            </div>
+            <div class="card-chevron">▾</div>
+        </div>
+        <div class="card-body">
+            <div class="card-body-inner">
+                <button class="hint-toggle" onclick="event.stopPropagation(); toggleHint('${d.id}')">
+                    <span id="hint-icon-${d.id}">▸</span> What does the brief say?
+                </button>
+                <div class="hint-content" id="hint-${d.id}">${d.hint}</div>
+                <div class="input-group">
+                    <label class="input-label" for="req-${d.id}">What does it need to include?</label>
+                    <textarea class="input-field" id="req-${d.id}" placeholder="${d.placeholders.requirements}" oninput="checkCompletion('${d.id}')"></textarea>
+                </div>
+                <div class="input-group">
+                    <label class="input-label" for="find-${d.id}">What do I need to find out?</label>
+                    <textarea class="input-field" id="find-${d.id}" placeholder="${d.placeholders.findout}" oninput="checkCompletion('${d.id}')"></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+function toggleCard(id) {
+    const card = document.getElementById(`card-${id}`);
+    const wasOpen = card.classList.contains('open');
+    document.querySelectorAll('.deliverable-card').forEach(c => c.classList.remove('open'));
+    if (!wasOpen) card.classList.add('open');
+}
+
+function toggleHint(id) {
+    const hint = document.getElementById(`hint-${id}`);
+    const icon = document.getElementById(`hint-icon-${id}`);
+    hint.classList.toggle('visible');
+    icon.textContent = hint.classList.contains('visible') ? '▾' : '▸';
+}
+
+function checkCompletion(id) {
+    const req = document.getElementById(`req-${id}`).value.trim();
+    const find = document.getElementById(`find-${id}`).value.trim();
+    const card = document.getElementById(`card-${id}`);
+    if (req.length > 5 && find.length > 5) {
+        card.classList.add('completed');
+    } else {
+        card.classList.remove('completed');
+    }
+    updateProgress();
+}
+
+function updateProgress() {
+    const total = deliverables.length;
+    const completed = document.querySelectorAll('.deliverable-card.completed').length;
+    const pct = Math.round((completed / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${completed} of ${total} mapped`;
+    const msg = document.getElementById('completionMsg');
+    if (completed === total) { msg.classList.add('visible'); } else { msg.classList.remove('visible'); }
+}
+
+function resetAll() {
+    if (confirm('Clear all your entries? This can\'t be undone.')) {
+        deliverables.forEach(d => {
+            document.getElementById(`req-${d.id}`).value = '';
+            document.getElementById(`find-${d.id}`).value = '';
+            document.getElementById(`card-${d.id}`).classList.remove('completed');
+        });
+        updateProgress();
+    }
+}
+
+const container = document.getElementById('deliverablesContainer');
+deliverables.forEach(d => container.appendChild(createDeliverableCard(d)));
+</script>
+</body>
+</html>
